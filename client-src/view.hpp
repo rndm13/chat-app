@@ -5,6 +5,7 @@
 #include "SDL3/SDL_opengles2.h"
 #include "SDL_events.h"
 
+#include "controller.hpp"
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl3.h"
@@ -20,7 +21,7 @@
 
 #include "../commmon-src/common_lib.hpp"
 
-class View : public boost::enable_shared_from_this<View> {
+class View {
 
     SDL_GLContext gl_context;
     SDL_Window *window;
@@ -40,7 +41,7 @@ class View : public boost::enable_shared_from_this<View> {
 
   public:
     View(boost::asio::thread_pool& _thr_pool) 
-        : thr_pool(_thr_pool) { 
+        : controller(Controller::create(_thr_pool)) { 
             setup();
         }
 
@@ -49,13 +50,6 @@ class View : public boost::enable_shared_from_this<View> {
     void loop();
 
   private:
-    void wait();
-    boost::asio::thread_pool& thr_pool;
-
-  public:
-
-    typedef boost::shared_ptr<View> pointer;
-    static pointer create(boost::asio::thread_pool &thr_pool) {
-        return pointer(new View(thr_pool));
-    }
+    
+    Controller::pointer controller;
 };

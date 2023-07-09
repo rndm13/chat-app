@@ -16,8 +16,8 @@
 
 i32 main() {
     boost::asio::thread_pool thr_pool;
-    View::pointer view = View::create(thr_pool);
-    view->loop();
+    View view(thr_pool);
+    view.loop();
 }
 
 // i32 main2(i32 argc, char **argv) {
