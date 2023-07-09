@@ -31,28 +31,9 @@ if(Boost_FOUND)
   MESSAGE( STATUS "Boost_LIB_VERSION = ${Boost_LIB_VERSION}.")
 endif()
 
-# ------ client -------
+add_subdirectory(imgui-cmake)
 
-project(client)
+add_subdirectory(./commmon-src/)
 
-add_executable(client ./client-src/main.cpp)
-
-target_link_libraries(client
-  fmt::fmt
-  ${CMAKE_THREAD_LIBS_INIT}
-  ${Boost_LIBRARIES}
-  -fsanitize=address # Debug only
-  )
-
-# ------ server -------
-
-project(server)
-
-add_executable(server ./server-src/main.cpp)
-
-target_link_libraries(server
-  fmt::fmt
-  ${CMAKE_THREAD_LIBS_INIT}
-  ${Boost_LIBRARIES}
-  -fsanitize=address # Debug only
-  )
+add_subdirectory(client-src)
+add_subdirectory(server-src)
