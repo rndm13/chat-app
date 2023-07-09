@@ -11,10 +11,13 @@
 //#include <iostream>
 //#include "../commmon-src/common_lib.hpp"
 #include "view.hpp"
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/thread_pool.hpp>
 
 i32 main() {
-    View view;
-    view.loop();
+    boost::asio::thread_pool thr_pool;
+    View::pointer view = View::create(thr_pool);
+    view->loop();
 }
 
 // i32 main2(i32 argc, char **argv) {

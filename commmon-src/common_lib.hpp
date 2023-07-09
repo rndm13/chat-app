@@ -4,6 +4,7 @@
 #include <fmt/ostream.h>
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
+#include <thread>
 
 using i8 = int8_t;
 using i16 = int16_t;
@@ -16,5 +17,8 @@ using u64 = uint64_t;
 
 template <>
 struct fmt::formatter<boost::thread::id> : fmt::ostream_formatter {};
+
+template <>
+struct fmt::formatter<std::thread::id> : fmt::ostream_formatter {};
 
 using boost::asio::ip::tcp;
