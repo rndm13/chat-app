@@ -9,40 +9,53 @@
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/system/system_error.hpp>
 #include <boost/thread.hpp>
-#include <boost/thread/detail/thread.hpp>
 #include <fmt/format.h>
 #include <fmt/std.h>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include "../commmon-src/common_lib.hpp"
 
-std::string make_daytime_string() {
-    std::time_t now = std::time(0);
-    return std::ctime(&now);
-}
-
 class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
     tcp::socket socket;
-    boost::array<char, 128> received_message;
-    std::string message;
+    boost::array<char, 256+64+4> received_message;
 
     void handle_write(const boost::system::error_code &error,
                       u64 bytes_transferred) {
-        fmt::print("[INFO {}] Sent a write.\n", boost::this_thread::get_id());
+        if (error) {
+            fmt::print("[ERROR {}] Failed to sent a write: \"{}\" \n", boost::this_thread::get_id(), error.what());
+        }
     }
 
     void handle_read(const boost::system::error_code &error,
                      u64 bytes_transferred) {
-        if (error && error != boost::asio::error::eof) {
-            fmt::print("[INFO {}] Error when receiving message: \"{}\"\n",
+        if (error == boost::asio::error::eof) {
+            fmt::print("[INFO {}] Connection ended.\n",
+                       boost::this_thread::get_id());
+            return;
+        } else if (error) {
+            fmt::print("[ERROR {}] Error when receiving message: \"{}\"\n",
                        boost::this_thread::get_id(), error.what());
             return;
         }
+        
         fmt::print(
             "[INFO {}] Received a message: \"{}\"\n",
             boost::this_thread::get_id(),
             std::string_view(received_message.data(), bytes_transferred));
+
+        socket.async_write_some(
+            boost::asio::buffer(received_message),
+            boost::bind(&tcp_connection::handle_write, shared_from_this(),
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred));
+        
+        socket.async_read_some(
+            boost::asio::buffer(received_message),
+            boost::bind(&tcp_connection::handle_read, shared_from_this(),
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred));
     }
 
   public:
@@ -55,22 +68,25 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
     tcp::socket &get_socket() { return socket; }
 
     void start() {
-        socket.async_read_some(
-            boost::asio::buffer(received_message),
-            boost::bind(&tcp_connection::handle_read, shared_from_this(),
-                        boost::asio::placeholders::error,
-                        boost::asio::placeholders::bytes_transferred));
-
-        message = make_daytime_string();
-
+        boost::array<char, 128> message = {"[SERVER]\nReceived new connection.\n"};
+        
+        fmt::print("[INFO {}] Sent this message: \"{}\"\n", boost::this_thread::get_id(), std::string_view(message.data(), message.size()));
         socket.async_write_some(
             boost::asio::buffer(message),
             boost::bind(&tcp_connection::handle_write, shared_from_this(),
                         boost::asio::placeholders::error,
                         boost::asio::placeholders::bytes_transferred));
+
+        socket.async_read_some(
+            boost::asio::buffer(received_message),
+            boost::bind(&tcp_connection::handle_read, shared_from_this(),
+                        boost::asio::placeholders::error,
+                        boost::asio::placeholders::bytes_transferred));
     }
 
-    ~tcp_connection() { fmt::print("[INFO] Disconnected.\n"); }
+    ~tcp_connection() { 
+        fmt::print("[INFO] Disconnected.\n"); 
+    }
 
     tcp_connection(boost::asio::io_context &ctx) : socket(ctx) {}
 };

@@ -9,20 +9,19 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl3.h"
-#include <boost/asio/io_context.hpp>
-#include <boost/smart_ptr/enable_shared_from_this.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/system/system_error.hpp>
 #include <boost/asio/dispatch.hpp>
+#include <boost/asio/io_context.hpp>
 #include <boost/asio/placeholders.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/chrono/duration.hpp>
+#include <boost/smart_ptr/enable_shared_from_this.hpp>
+#include <boost/system/system_error.hpp>
 #include <stdio.h>
 #include <thread>
 
 #include "../commmon-src/common_lib.hpp"
 
 class View {
-
     SDL_GLContext gl_context;
     SDL_Window *window;
 
@@ -40,16 +39,21 @@ class View {
     void draw_imgui();
 
   public:
-    View(boost::asio::thread_pool& _thr_pool) 
-        : controller(Controller::create(_thr_pool)) { 
-            setup();
-        }
+    View(boost::asio::thread_pool &_thr_pool)
+        : controller(Controller::create(_thr_pool)),
+          model(controller->get_model()) {
+        setup();
+    }
 
     ~View() { cleanup(); }
 
     void loop();
 
   private:
-    
     Controller::pointer controller;
+    const Model &model;
+
+    boost::array<char, 128> host_name{};
+    boost::array<char, 256> message_contents{};
+    boost::array<char, 64> user_name{};
 };

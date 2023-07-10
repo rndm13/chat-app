@@ -9,12 +9,15 @@
 
 struct Controller : public boost::enable_shared_from_this<Controller> {
   private:
+    static constexpr std::string_view port_number = "8000";
     boost::asio::thread_pool &thr_pool;
 
     tcp::socket socket;
-    tcp::resolver::results_type endpoints;
 
-    std::atomic<Model> model;
+    mutable boost::mutex model_mtx;
+    Model model;
+
+    boost::array<char, 256 + 64 + 4> last_read_message{};
 
   public:
     typedef boost::shared_ptr<Controller> pointer;
@@ -25,11 +28,20 @@ struct Controller : public boost::enable_shared_from_this<Controller> {
     Controller(boost::asio::thread_pool &_thr_pool)
         : thr_pool(_thr_pool), socket(thr_pool.get_executor()) {}
 
+    ~Controller();
+
     template <class MemberFunc, class... Args>
-    void do_member(MemberFunc &&to_do, Args &&...args) {
-        boost::asio::dispatch(thr_pool,
-                              boost::bind(to_do, shared_from_this(), args...));
+    auto do_member(MemberFunc &&to_do, Args &&...args) {
+        return boost::asio::dispatch(
+            thr_pool, boost::bind(to_do, shared_from_this(), args...));
     }
 
-    void wait(const boost::asio::chrono::duration<i64> &dur);
+    const Model &get_model() const;
+
+    void read_incoming_messages();
+    void handle_read(const boost::system::error_code &, u64);
+    void send_message(const Message &);
+    void handle_write(const boost::system::error_code &error,
+                                  u64 bytes_transfered);
+    void connect_to(std::string_view host_name);
 };
