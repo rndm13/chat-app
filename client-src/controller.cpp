@@ -44,9 +44,9 @@ void Controller::handle_read(const boost::system::error_code &error,
     }
 }
 
-void Controller::send_message(const Message &msg) {
+void Controller::send_message(const boost::array<char, 256> &msg) {
     socket.async_write_some(
-        boost::asio::buffer(fmt::format("{}", msg)),
+        boost::asio::buffer(msg),
         boost::bind(&Controller::handle_write, shared_from_this(),
                     boost::asio::placeholders::error,
                     boost::asio::placeholders::bytes_transferred));
@@ -55,19 +55,40 @@ void Controller::send_message(const Message &msg) {
 void Controller::handle_write(const boost::system::error_code &error,
                               u64 bytes_transfered) {}
 
-void Controller::connect_to(std::string_view host_name) {
-    tcp::resolver resolver(thr_pool.get_executor());
-    try {
-        auto result = resolver.resolve(host_name, port_number);
-
-        boost::asio::connect(socket, result);
-
+void Controller::handle_after_login(const boost::system::error_code &error) {
+    if (!error) {
         read_incoming_messages();
-    } catch (boost::system::system_error &error) {
-        boost::unique_lock<boost::mutex> lock(model_mtx);
-
-        model.messages.emplace_back(
-            fmt::format("Failed to connect: {}.", error.code().message()),
-            "CLIENT");
+        return;
     }
+    boost::unique_lock<boost::mutex> lock(model_mtx);
+
+    model.messages.emplace_back(
+        fmt::format("Failed to authenticate: {}.", error.message()), "CLIENT");
+}
+
+void Controller::handle_connection(const boost::system::error_code &error,
+                                   std::string_view user_name) {
+    if (!error) {
+        socket.async_write_some(boost::asio::buffer(user_name),
+                                boost::bind(&Controller::handle_after_login,
+                                            shared_from_this(),
+                                            boost::asio::placeholders::error));
+        return;
+    }
+    boost::unique_lock<boost::mutex> lock(model_mtx);
+
+    model.messages.emplace_back(
+        fmt::format("Failed to connect: {}.", error.message()), "CLIENT");
+}
+
+void Controller::connect_to(std::string_view host_name,
+                            std::string_view user_name) {
+    tcp::resolver resolver(thr_pool.get_executor());
+    auto result = resolver.resolve(host_name, port_number);
+
+    boost::asio::async_connect(socket, result,
+                               boost::bind(&Controller::handle_connection,
+                                           shared_from_this(),
+                                           boost::asio::placeholders::error(),
+                                           user_name));
 }

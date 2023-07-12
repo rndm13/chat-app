@@ -17,13 +17,19 @@
 #include <string_view>
 #include <thread>
 
-class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
+class tcp_connection
+    : public boost::enable_shared_from_this<tcp_connection> {
     tcp::socket socket;
-    boost::array<char, 256 + 64 + 4> received_message;
+    boost::array<char, 256> received_message;
+    boost::array<char, 64> user_name;
 
     void handle_write(const boost::system::error_code &error,
-                      u64 bytes_transferred);
+                      u64 bytes_transferred); 
+
     void handle_read(const boost::system::error_code &error,
+                     u64 bytes_transferred);
+
+    void handle_join(const boost::system::error_code &error,
                      u64 bytes_transferred);
 
   public:
@@ -37,7 +43,12 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
 
     void start();
 
-    ~tcp_connection() { fmt::print("[INFO] Disconnected.\n"); }
+    ~tcp_connection() {
+        fmt::print("[INFO] Someone disconnected.\n"); 
+    }
 
-    tcp_connection(boost::asio::io_context &ctx) : socket(ctx) {}
+    void send_message(const Message &msg); 
+
+    tcp_connection(boost::asio::io_context &ctx)
+        : socket(ctx) {}
 };

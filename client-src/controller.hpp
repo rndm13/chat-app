@@ -40,8 +40,11 @@ struct Controller : public boost::enable_shared_from_this<Controller> {
 
     void read_incoming_messages();
     void handle_read(const boost::system::error_code &, u64);
-    void send_message(const Message &);
+    void send_message(const boost::array<char, 256>&);
     void handle_write(const boost::system::error_code &error,
-                                  u64 bytes_transfered);
-    void connect_to(std::string_view host_name);
+                      u64 bytes_transfered);
+    void connect_to(std::string_view host_name, std::string_view user_name);
+    void handle_connection(const boost::system::error_code &error,
+                           std::string_view user_name);
+    void handle_after_login(const boost::system::error_code &error);
 };
