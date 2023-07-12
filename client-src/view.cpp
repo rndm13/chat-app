@@ -22,7 +22,8 @@ void View::draw_imgui() {
         std::string str_messages =
             fmt::format("{}", fmt::join(model.messages, "\n"));
 
-        ImGui::InputTextMultiline("", str_messages.data(), str_messages.size(), ImVec2(0,0), ImGuiInputTextFlags_ReadOnly);
+        ImGui::InputTextMultiline("", str_messages.data(), str_messages.size(),
+                                  ImVec2(0, 0), ImGuiInputTextFlags_ReadOnly);
 
         ImGui::InputText("Message text", message_contents.data(),
                          message_contents.size());

@@ -1,12 +1,17 @@
 #include "tcp_connection.hpp"
+#include "fmt/format.h"
 
 void tcp_connection::handle_write(const boost::system::error_code &error,
                                   u64 bytes_transferred) {
 
     if (error) {
-        fmt::print("[ERROR {}] Failed to sent a write: \"{}\" \n",
+        fmt::print("[ERROR {}] Failed to send a write: \"{}\" \n",
                    boost::this_thread::get_id(), error.what());
+        return;
     }
+
+    fmt::print("[INFO {}] Sent a message to {}\n", boost::this_thread::get_id(),
+               user_name);
 }
 
 void tcp_connection::handle_read(const boost::system::error_code &error,
@@ -16,6 +21,8 @@ void tcp_connection::handle_read(const boost::system::error_code &error,
         fmt::print("[INFO {}] Connection with {} ended.\n",
                    boost::this_thread::get_id(), user_name);
 
+        push_message({fmt::format("{} disconnected.", fmt::to_string(user_name)), "SERVER"});
+
         return;
     } else if (error) {
         fmt::print("[ERROR {}] Error when receiving message: \"{}\"\n",
@@ -23,9 +30,7 @@ void tcp_connection::handle_read(const boost::system::error_code &error,
         return;
     }
 
-    Message msg(received_message, user_name);
-
-    send_message(msg);
+    push_message({received_message, user_name});
 
     socket.async_read_some(
         boost::asio::buffer(received_message),
@@ -38,9 +43,8 @@ void tcp_connection::handle_join(const boost::system::error_code &error,
                                  u64 bytes_transferred) {
 
     if (!error) {
-        Message msg(fmt::format("User {} has connected.", user_name), "SERVER");
+        push_message({fmt::format("Connection from {}.", fmt::to_string(user_name)), "SERVER"});
 
-        send_message(msg);
 
         socket.async_read_some(
             boost::asio::buffer(received_message),
@@ -58,14 +62,19 @@ void tcp_connection::start() {
                     boost::asio::placeholders::bytes_transferred));
 }
 
-void tcp_connection::send_message(const Message &msg) {
-    try {
-        socket.async_write_some(
-            boost::asio::buffer(msg.to_string()),
-            boost::bind(&tcp_connection::handle_write, shared_from_this(),
-                        boost::asio::placeholders::error,
-                        boost::asio::placeholders::bytes_transferred));
-    } catch (std::exception &err) {
-        fmt::print("[ERROR] Failed to send message.\n");
-    }
+void tcp_connection::push_message(const Message &msg) {
+    boost::unique_lock<boost::mutex> lock(mutex);
+
+    to_process.push(msg);
+    new_messages.notify_one();
 }
+
+void tcp_connection::send_message(const Message &msg) {
+    socket.async_write_some(
+        boost::asio::buffer(msg.to_string()),
+        boost::bind(&tcp_connection::handle_write, shared_from_this(),
+                    boost::asio::placeholders::error,
+                    boost::asio::placeholders::bytes_transferred));
+}
+
+
