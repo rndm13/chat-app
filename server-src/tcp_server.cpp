@@ -24,15 +24,17 @@ void tcp_server::handle_accept(const boost::system::error_code &error) {
 }
 
 void tcp_server::send_to_all(const Message &msg) {
+        
     for (auto &conn : active_connections) {
         if (conn.expired()) {
-            std::swap(conn, active_connections.back());
-            active_connections.pop_back();
+            if (&conn != &active_connections.back()) { // if it's not the last element
+                std::swap(conn, active_connections.back());
+                boost::shared_ptr(conn)->send_message(msg);
+            }
+            active_connections.pop_back(); // remove the last element
+        } else {
+            boost::shared_ptr(conn)->send_message(msg); 
         }
-    }
-
-    for (auto &conn : active_connections) {
-        boost::shared_ptr(conn)->send_message(msg);
     }
 }
 

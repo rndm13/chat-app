@@ -33,7 +33,3 @@ Message Message::from_message_string(std::string_view sv) {
     return Message(sv.substr(content_start, content_end - content_start),
                    sv.substr(user_start, user_end - user_start));
 }
-
-std::string Message::to_string() const {
-    return fmt::format("{}", *this);
-}
