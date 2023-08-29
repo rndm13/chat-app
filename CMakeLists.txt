@@ -33,7 +33,7 @@ endif()
 
 add_subdirectory(imgui-cmake)
 
-add_subdirectory(./commmon-src/)
+add_subdirectory(common-src)
 
 add_subdirectory(client-src)
 add_subdirectory(server-src)

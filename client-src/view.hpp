@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <thread>
 
-#include "../commmon-src/common_lib.hpp"
+#include "../common-src/common_lib.hpp"
 
 class View {
     SDL_GLContext gl_context;
