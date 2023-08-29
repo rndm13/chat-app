@@ -78,10 +78,10 @@ void tcp_connection::push_message(const Message &msg) {
 }
 
 void tcp_connection::send_message(const Message &msg) {
-    std::string msg_str = fmt::to_sv(msg);
+    std::string msg_str = fmt::to_string(msg);
 
     socket.async_write_some(
-        boost::asio::buffer(fmt::to_sv(msg)),
+        boost::asio::buffer(fmt::to_string(msg)),
         boost::bind(&tcp_connection::handle_write, shared_from_this(),
                     boost::asio::placeholders::error,
                     boost::asio::placeholders::bytes_transferred));
